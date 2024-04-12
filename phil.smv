@@ -1,0 +1,99 @@
+--
+-- CSC 322 Project 3
+--
+-- Name: Gareth Marriott
+-- Vnum: V00875748
+--
+--
+MODULE main
+  
+VAR
+  chopsticks : array 0..4 of {nobody,0,1,2,3,4}; -- who holds the chopstick.
+  --
+  -- Philosopher i has chopstick i on left and chopstick
+  -- (i + 1) mod 5 on right
+  --
+  turn : {0,1,2,3,4};
+  p0 : process philosopher(0,chopsticks[0],chopsticks[1],turn);
+  p1 : process philosopher(1,chopsticks[1],chopsticks[2],turn);
+  p2 : process philosopher(2,chopsticks[2],chopsticks[3],turn);
+  p3 : process philosopher(3,chopsticks[3],chopsticks[4],turn);
+  p4 : process philosopher(4,chopsticks[4],chopsticks[0],turn);
+
+  
+  
+ASSIGN
+  --
+  -- Initially, all chopsticks are free
+  --
+  init(chopsticks[0]) := nobody;
+  init(chopsticks[1]) := nobody;
+  init(chopsticks[2]) := nobody;
+  init(chopsticks[3]) := nobody;
+  init(chopsticks[4]) := nobody;
+  init(turn) := 0;
+
+MODULE philosopher(i,left,right,turn)
+  
+VAR
+  state : {thinking, hungry, eating, done};
+  
+DEFINE
+  --
+  -- These are just abbreviations, not state variables
+  --
+  gotleft := (left=i);
+  gotright := (right=i);
+  leftfree := (left=nobody);
+  rightfree := (right=nobody);
+    
+ASSIGN
+  init(state) := thinking;
+
+  next(left)  := case
+    (state = done) : nobody; -- drop chopstick
+    --
+    -- if hungry and left chopstick if free, take it
+    --
+    (state=hungry) & leftfree & (turn=i): i;
+    TRUE : left;
+  esac;
+
+  next(right) := case
+    (state = done) : nobody; -- drop chopstick
+    --
+    -- if hungry and have left chopstick and right is free, take it
+    --
+    (state=hungry) & gotleft & rightfree & (turn=i): i; 
+    TRUE : right;
+  esac;
+
+  next(state) := case
+    (state=thinking) : {thinking, hungry};
+    (state=hungry) & gotleft & gotright : eating;
+    (state=hungry) : hungry; -- don't have chopsticks
+    (state=eating) : {eating, done};
+    (state=done) : thinking;
+    TRUE : state;
+  esac;
+
+  next(turn) := case
+    (turn=i) & (state=thinking) & (i!=4): i+1;
+    (turn=i) & (state=thinking) & (i=4): 0;
+    TRUE : turn;
+  esac;
+
+-- add fairness constraints here
+FAIRNESS !(state = eating)
+-- FAIRNESS !(state = thinking)
+FAIRNESS running
+
+-- add specifications here 
+
+-- safety:
+  -- SPEC AG ((state=thinking) -> AF (state=eating))
+  SPEC AG (state=eating -> (gotleft & gotright))
+  
+
+-- liveness:
+SPEC AG ((state=hungry) -> AF (state=eating))
