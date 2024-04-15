@@ -21,6 +21,7 @@ VAR
   p4 : process philosopher(4,chopsticks[4],chopsticks[0],turn);
 
   
+  
 ASSIGN
   --
   -- Initially, all chopsticks are free
@@ -34,6 +35,9 @@ ASSIGN
 
 -- no strict sequencing
 SPEC EF (p0.state = eating & E [ p0.state = eating U (!(p0.state = eating) & E [ !(p1.state = eating) U p0.state = eating ] ) ] )
+
+-- concurrent eating
+SPEC EF ((p0.state=eating)&(p2.state=eating))
 
 MODULE philosopher(i,left,right,turn)
   
@@ -80,14 +84,14 @@ ASSIGN
   esac;
 
   next(turn) := case
-    (turn=i) & (state=thinking) & (i!=4): i+1;
-    (turn=i) & (state=thinking) & (i=4): 0;
+    (turn=i) & ((state=thinking)|(state=eating)) & (i!=4): i+1;
+    (turn=i) & ((state=thinking)|(state=eating)) & (i=4): 0;
     TRUE : turn;
   esac;
 
 -- add fairness constraints here
 FAIRNESS !(state = eating)
--- FAIRNESS !(state = thinking)
+FAIRNESS !(state = thinking)
 FAIRNESS running
 
 -- add specifications here 
